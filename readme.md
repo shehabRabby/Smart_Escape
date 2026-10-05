@@ -1,52 +1,103 @@
-# SMART ESCAPE
+# Smart Escape — Interactive Evacuation Route Simulator
 
-Next.js App Router, strict TypeScript, Tailwind CSS, browser file import,
-an interactive SVG map, and a React-independent routing engine.
+Smart Escape lets users explore a building graph, select a starting location,
+and find the lowest-cost route to an accessible open exit. Change simulated
+hazards to see the route update immediately.
 
-Run `npm install`, `npm run dev`, `npm test`, and `npm run build`.
-On Windows with restricted PowerShell scripts, use `npm.cmd`.
-The app fetches `/sample-building.json` automatically. Select Room 1 (`R1`) on the
-map or in the start dropdown to see `R1 → C1 → C2 → E1`, cost 7.
-Imported JSON is read and validated entirely in the browser. A valid
-import replaces the building and clears the selected start; an invalid import
-preserves the building, selection, and route and shows validation errors.
+## Tech stack
 
-The reusable SVG map fits imported coordinates with padding, shows all nodes,
-corridors and costs, and reflects the current runtime availability state.
-Available rooms/junctions support pointer, Enter, and Space selection. Exits and
-blocked starts cannot be selected. The route panel and sequence use the existing
-engine's result, including empty, unreachable, and numeric-overflow states.
-The panel stacks below the map on smaller screens. Hazard/reset controls use
-`lucide-react`; no graph or animation libraries are included.
+- Next.js App Router and React
+- Strict TypeScript and Tailwind CSS
+- Responsive SVG map
+- Motion for subtle animations and Lucide React for icons
+- Typed English/Bangla translation dictionary
 
-Hazard controls independently block/unblock rooms and junctions, block/unblock
-corridors, and close/reopen exits. Each toggle immediately reroutes through the
-existing engine. A blocked selected start stays selected and shows exactly
-`Starting location blocked`; inaccessible exits show `No route available`.
-Reset clones the imported `initial_state` into runtime state, keeps the building
-and selection, and recalculates. Imports and toggles never modify the baseline.
-The sample also supports the required C2 detour (cost 11) and R2 route (cost 7).
-The original equal-cost demo is preserved as `tests/fixtures/tie-building.json`.
-`node tests/ui-smoke.mjs` runs dependency-free headless Chrome checks against
-`out/` after a build; set `CHROME_PATH` if Chrome is installed elsewhere. It checks
-imports, state preservation, route selection, keyboard access, mobile overflow,
-and extreme coordinate ranges. Screenshots and fixtures go to ignored `.tmp/`.
+## Implemented features
 
-`parseBuildingJson(text)` handles JSON syntax errors; `validateBuilding(unknown)`
-returns either validated data or an array of field-specific errors. All schema
-constraints are checked, including undirected duplicate pairs and state IDs.
-IDs are preserved exactly. Unknown extra fields are ignored; repeated state IDs
-are accepted and naturally deduplicated by routing sets. Disconnected graphs
-are valid. Costs must be positive safe integers so imported numbers are exact.
+- Local browser JSON import with schema validation and useful errors; invalid
+  imports preserve the current simulation.
+- Deterministic Dijkstra routing on undirected weighted graphs, with exit-ID
+  and full node-sequence tie-breaking.
+- Responsive SVG map showing locations, corridor costs, available exits,
+  hazards, and the active route.
+- Synchronized map, keyboard, and dropdown start selection.
+- Room/junction blocking, corridor blocking, exit closing, and instant rerouting.
+- Reset to the imported initial state while keeping the selected start.
+- Route sequence, destination, total weighted cost, corridor count, and clear
+  blocked-start/unreachable statuses.
+- English and Bangla UI without changing imported labels or IDs.
+- Subtle Motion transitions, reduced-motion support, and visible keyboard focus.
 
-`findEvacuationRoute(building, startId, state?)` uses the initial state by default.
-Pass validated building data and a valid state. It returns a route with node IDs,
-edge IDs, exit ID, and total cost, or `null` for an invalid start or unreachable
-exit. Dijkstra uses linear minimum selection (at most 60 nodes), full path
-comparisons, and locale-independent UTF-16 string ordering. Internal bigint sums
-keep costs exact; a winning total above `Number.MAX_SAFE_INTEGER` raises a
-human-readable RangeError rather than returning an inaccurate number.
+Routing, validation, imports, and simulation state are completely client-side.
+Imported files are read locally; there is no backend, API, database, or remote
+storage. Route costs are weighted costs, not physical distance units.
 
-Static export (`out/`) keeps the app browser-only and compatible with Vercel.
-Localization and animation are left for later stages.
-No backend, database, or API routes are present.
+## Run locally
+
+Use Node.js 24 LTS and npm, then run:
+
+```sh
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). The sample building loads
+automatically. On PowerShell systems that restrict scripts, use `npm.cmd`.
+
+## Production build
+
+```sh
+npm run build
+```
+
+The static-export output is generated in `out/`.
+
+## Deployment
+
+**Live URL:** `<ADD_LIVE_URL_HERE>`
+
+Deploy with Vercel using `npm run build` and the static output directory `out/`.
+No server environment variables or database configuration are required.
+
+## Screenshots
+
+- [Baseline route](screenshots/baseline-route.png): R1 → C1 → C2 → E1, cost 7.
+- [C2 blocked reroute](screenshots/c2-blocked-reroute.png):
+  R1 → C1 → C3 → C4 → E2, cost 11.
+
+## Verification
+
+```sh
+npm test
+```
+
+The checks cover deterministic routing, validation, runtime-state independence,
+localization, and the mandatory sample scenarios. After a production build,
+`node tests/ui-smoke.mjs` runs the browser checks with local headless Chrome.
+Set `CHROME_PATH` if Chrome is installed elsewhere.
+
+## Known issue
+
+Very dense or coincident coordinates may cause label overlap. Supplied node
+coordinates are preserved; the app does not apply automatic graph layout.
+
+## AI assistance
+
+**AI tool used:** Codex.
+
+**Most useful AI prompt:** Codex was instructed to implement deterministic
+Dijkstra routing, robust client-side JSON validation, a responsive SVG building
+map, immediate hazard rerouting, an English/Bangla UI, and subtle animations,
+while keeping the project browser-only, dependency-light, and compatible with
+Vercel static export.
+
+## Educational simulation disclaimer
+
+This project is an educational evacuation simulation, not a certified emergency
+navigation system. It does not verify real-world conditions or replace official
+evacuation plans. In an emergency, follow posted instructions and guidance from
+authorized personnel.
+
+## License
+
+Released under the [MIT License](LICENSE).
