@@ -17,6 +17,12 @@ export function validateBuilding(value: unknown): ValidationResult {
   if (!isRecord(value)) return { success: false, errors: ["Building data must be a JSON object."] };
   const errors: string[] = [];
   if (!isNonEmptyString(value.building)) errors.push("building must be a non-empty string.");
+  // Reject invalid graph sizes before iterating attacker-controlled arrays.
+  const invalidNodeCount = Array.isArray(value.nodes) && (value.nodes.length < 2 || value.nodes.length > 60);
+  const invalidEdgeCount = Array.isArray(value.edges) && (value.edges.length < 1 || value.edges.length > 150);
+  if (invalidNodeCount) errors.push("nodes must contain 2–60 entries.");
+  if (invalidEdgeCount) errors.push("edges must contain 1–150 entries.");
+  if (invalidNodeCount || invalidEdgeCount) return { success: false, errors };
   const nodes: BuildingNode[] = [];
   const edges: BuildingEdge[] = [];
   const nodeById = new Map<string, BuildingNode>();
@@ -25,7 +31,6 @@ export function validateBuilding(value: unknown): ValidationResult {
 
   if (!Array.isArray(value.nodes)) errors.push("nodes must be an array.");
   else {
-    if (value.nodes.length < 2 || value.nodes.length > 60) errors.push("nodes must contain 2–60 entries.");
     value.nodes.forEach((entry: unknown, index: number) => {
       const path = `nodes[${index}]`;
       if (!isRecord(entry)) { errors.push(`${path} must be an object.`); return; }
@@ -48,7 +53,6 @@ export function validateBuilding(value: unknown): ValidationResult {
 
   if (!Array.isArray(value.edges)) errors.push("edges must be an array.");
   else {
-    if (value.edges.length < 1 || value.edges.length > 150) errors.push("edges must contain 1–150 entries.");
     value.edges.forEach((entry: unknown, index: number) => {
       const path = `edges[${index}]`;
       if (!isRecord(entry)) { errors.push(`${path} must be an object.`); return; }
@@ -74,9 +78,12 @@ export function validateBuilding(value: unknown): ValidationResult {
     for (const key of ["blocked_nodes", "blocked_edges", "closed_exits"] as const) {
       const entries = value.initial_state[key];
       if (!Array.isArray(entries)) { errors.push(`initial_state.${key} must be an array of IDs.`); continue; }
-      entries.forEach((id: unknown, index: number) => {
+      for (let index = 0; index < entries.length; index++) {
+        // Bound the error list and stop scanning pathological invalid state arrays.
+        if (errors.length >= 100) return { success: false, errors: [...errors.slice(0, 100), "Validation stopped after 100 errors. Fix the reported fields and re-import."] };
+        const id: unknown = entries[index];
         const path = `initial_state.${key}[${index}]`;
-        if (typeof id !== "string") { errors.push(`${path} must be a string ID.`); return; }
+        if (typeof id !== "string") { errors.push(`${path} must be a string ID.`); continue; }
         if (key === "blocked_edges") {
           if (!edgeIds.has(id)) errors.push(`${path} references unknown edge "${id}".`);
         } else {
@@ -86,7 +93,7 @@ export function validateBuilding(value: unknown): ValidationResult {
           else if (key === "closed_exits" && node.type !== "exit") errors.push(`${path} must reference an exit.`);
         }
         state[key].push(id);
-      });
+      }
     }
   }
   if (errors.length) return { success: false, errors };
