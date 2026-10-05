@@ -161,6 +161,42 @@ h1 > span { color: #91a0b6; font-weight: 400; }
 @media (max-width: 800px) { .workspace-grid { grid-template-columns: minmax(0, 1fr); } .main-content { width: 92%; } .app-header { padding: 18px 4%; min-height: 80px; } .local-badge { display: none; } .page-heading { padding: 28px 0 24px; } .workspace-badge { display: none; } .route-panel { padding: 24px; } .route-panel .panel-intro { max-width: 400px; } .route-metrics { padding: 20px 0; } .route-metrics strong { font-size: 30px; } .legend ul { display: flex; flex-wrap: wrap; gap: 16px 24px; } .route-sequence { align-items: flex-start; flex-wrap: wrap; } .sequence-heading { flex-basis: 100%; } .sequence-cost { margin-left: auto; } .map-canvas { min-height: 0; } .map-footer { flex-direction: row; flex-wrap: wrap; } }
 @media (max-width: 480px) { .brand { font-size: 21px; gap: 8px; } .brand-mark { width: 35px; height: 40px; border-radius: 10px; } .brand small { font-size: 6px; letter-spacing: 1.5px; } .header-actions { gap: 0; } .import-button { padding: 10px; gap: 6px; font-size: 10px; } .mobile-break { display: block; } h1 { font-size: 28px; line-height: 1.3; } .page-heading p { max-width: 270px; font-size: 11px; } .map-toolbar { padding: 16px; gap: 8px; } .building-title { gap: 8px; } .building-title h2 { font-size: 13px; } .building-icon { width: 34px; height: 34px; } .map-mode { font-size: 7px; letter-spacing: .6px; gap: 4px; } .canvas-label { top: 10px; left: 14px; font-size: 6px; } .map-footer { padding: 14px; font-size: 9px; gap: 10px; } .map-footer > div { gap: 12px; } .route-sequence { padding: 19px; gap: 16px; } .sequence-nodes { flex-basis: 100%; } .sequence-cost { border: none; padding-left: 0; } .app-footer { flex-direction: column; gap: 10px; } .node-label { font-size: 23px; } .node-caption { font-size: 13px; letter-spacing: .5px; } .cost-label text { font-size: 17px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.reset-button { display: inline-flex; justify-content: center; align-items: center; gap: 8px; flex-shrink: 0; padding: 10px 14px; border: 1px solid #435572; border-radius: 7px; background: #19283d; color: #c5d3e8; font-size: 11px; font-weight: 600; transition: background .15s, border-color .15s; }
+.reset-button:hover { background: #263951; border-color: #7c99c2; }
+.hazard-controls { margin-top: 20px; padding: 24px; background: #111d2e; border: 1px solid #29374b; border-radius: 12px; min-width: 0; }
+.hazard-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+.hazard-heading .eyebrow { display: flex; align-items: center; gap: 8px; color: #d8b374; font-size: 9px; }
+.hazard-heading h2 { margin: 10px 0 8px; font-size: 20px; font-weight: 600; letter-spacing: -.4px; }
+.hazard-heading p { margin: 0; color: #94a5bd; font-size: 11px; line-height: 1.7; }
+.hazard-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.hazard-group { border: 1px solid #2d3e56; background: #142136; border-radius: 9px; min-width: 0; overflow: hidden; }
+.hazard-group-heading { display: flex; gap: 9px; align-items: center; padding: 16px 13px; border-bottom: 1px solid #2a3c55; color: #9db2cf; }
+.hazard-group-heading > div { flex: 1; min-width: 0; }
+.hazard-group-heading h3 { font-size: 12px; color: #d5e0f1; font-weight: 600; margin: 0 0 5px; }
+.hazard-group-heading p { font-size: 9px; margin: 0; color: #8c9fb9; }
+.hazard-count { color: #92a6c2; background: #223047; border: 1px solid #334661; padding: 4px 6px; font-size: 8px; border-radius: 4px; flex-shrink: 0; }
+.hazard-count.nonzero { color: #f1a3ae; border-color: #9d526266; background: #75344433; }
+.hazard-list { list-style: none; padding: 6px; margin: 0; max-height: 235px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #456080 #142136; }
+.hazard-list li + li { margin-top: 3px; }
+.hazard-toggle { width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; padding: 10px 8px; border: 1px solid transparent; background: transparent; color: #a5b8d2; border-radius: 6px; transition: background .15s, border-color .15s; }
+.hazard-toggle:hover { border-color: #466082; background: #20314a; }
+.hazard-toggle.is-active { background: #73384430; border-color: #9c566357; }
+.hazard-toggle.is-active:hover { background: #73384450; border-color: #c17382; }
+.hazard-item-text { flex: 1; min-width: 0; }
+.hazard-item-text strong { display: block; color: #d1def1; font-size: 11px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+.hazard-item-text small { display: block; color: #8fa4c2; font-size: 9px; margin-top: 3px; overflow-wrap: anywhere; }
+.hazard-item-icon { display: grid; place-items: center; color: #8fa9c9; }
+.is-active .hazard-item-icon, .is-active .hazard-state { color: #f09cac; }
+.hazard-state { display: flex; align-items: center; gap: 7px; font-size: 8px; color: #9ab2cf; flex-shrink: 0; }
+.toggle-track { width: 27px; height: 15px; background: #31465f; border: 1px solid #4e6888; border-radius: 20px; position: relative; }
+.toggle-track > span { position: absolute; left: 2px; top: 2px; width: 9px; height: 9px; border-radius: 50%; background: #a8bcd6; transition: left .15s, background .15s; }
+.is-active .toggle-track { background: #a1465d; border-color: #d67a8f; }
+.is-active .toggle-track > span { left: 14px; background: #ffe2e9; }
+.map-edge.blocked-edge .corridor-line { stroke: #c94d63; stroke-width: 5; stroke-dasharray: 6 6; }
+.map-node.unavailable.selected .node-halo { fill: #cb50641a; stroke: #c94d63; stroke-dasharray: 5 4; }
+@media (max-width: 1100px) { .hazard-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hazard-group:last-child { grid-column: 1 / -1; } .header-actions { gap: 12px; } }
+@media (max-width: 800px) { .hazard-groups { grid-template-columns: minmax(0, 1fr); } .hazard-controls { padding: 22px; } .hazard-heading { align-items: flex-start; } }
+@media (max-width: 480px) { .hazard-controls { padding: 18px; } .hazard-heading { flex-wrap: wrap; gap: 14px; } .hazard-heading h2 { font-size: 18px; } .header-actions { gap: 7px; } .header-reset { padding: 10px 7px; font-size: 10px; gap: 4px; } .brand { font-size: 18px; gap: 6px; } .brand-mark { width: 30px; height: 35px; } .brand small { font-size: 5px; letter-spacing: 1px; } }
 @media (max-width: 480px) {
   .map-node.room .node-shape, .map-node.exit .node-shape { x: -58px; y: -33px; width: 116px; height: 66px; }
   .map-node.junction .node-shape { r: 28px; }

@@ -1,0 +1,18 @@
+{
+  "building": "Original tie-breaking fixture",
+  "nodes": [
+    { "id": "room-101", "label": "Room 101", "type": "room", "x": 0, "y": 0 },
+    { "id": "hall-a", "label": "Hall A", "type": "junction", "x": 100, "y": 0 },
+    { "id": "hall-b", "label": "Hall B", "type": "junction", "x": 0, "y": 100 },
+    { "id": "exit-a", "label": "East Exit", "type": "exit", "x": 200, "y": 0 },
+    { "id": "exit-b", "label": "South Exit", "type": "exit", "x": 0, "y": 200 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "room-101", "to": "hall-a", "cost": 2 },
+    { "id": "e2", "from": "room-101", "to": "hall-b", "cost": 2 },
+    { "id": "e3", "from": "hall-a", "to": "exit-a", "cost": 3 },
+    { "id": "e4", "from": "hall-b", "to": "exit-a", "cost": 3 },
+    { "id": "e5", "from": "hall-b", "to": "exit-b", "cost": 3 }
+  ],
+  "initial_state": { "blocked_nodes": [], "blocked_edges": [], "closed_exits": [] }
+}

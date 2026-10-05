@@ -2,17 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import type { BuildingData } from "@/lib/building-types";
+import { RotateCcw } from "lucide-react";
+import type { BuildingData, BuildingState } from "@/lib/building-types";
 import { parseBuildingJson } from "@/lib/validate-building";
 import { findEvacuationRoute } from "@/lib/routing";
 import { BuildingMap } from "@/components/building-map";
 import { RoutePanel } from "@/components/route-panel";
 import { Icon } from "@/components/icon";
+import { HazardControls } from "@/components/hazard-controls";
+import { createRuntimeState, toggleHazard } from "@/lib/simulation-state";
+import type { RuntimeState } from "@/lib/simulation-state";
 
 export default function SmartEscapePage() {
   const [building, setBuilding] = useState<BuildingData | null>(null);
   const [filename, setFilename] = useState("");
   const [startId, setStartId] = useState("");
+  const [runtimeState, setRuntimeState] = useState<RuntimeState>({ blockedNodes: [], blockedEdges: [], closedExits: [] });
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -28,7 +33,7 @@ export default function SmartEscapePage() {
         if (!response.ok) throw new Error(`Sample building could not be loaded (${response.status}). Import a building JSON to get started.`);
         const result = parseBuildingJson(await response.text());
         if (controller.signal.aborted || version !== requestVersion.current) return;
-        if (result.success) { setBuilding(result.data); setFilename("sample-building.json"); }
+        if (result.success) { setBuilding(result.data); setRuntimeState(createRuntimeState(result.data.initial_state)); setFilename("sample-building.json"); }
         else setErrors(result.errors);
       } catch (error: unknown) {
         if (!controller.signal.aborted && version === requestVersion.current) setErrors([error instanceof Error ? error.message : "Sample building could not be loaded."]);
@@ -52,6 +57,7 @@ export default function SmartEscapePage() {
       if (version !== requestVersion.current) return;
       if (!result.success) { setErrors(result.errors); return; }
       setBuilding(result.data);
+      setRuntimeState(createRuntimeState(result.data.initial_state));
       setFilename(file.name);
       setStartId("");
       setErrors([]);
@@ -65,30 +71,51 @@ export default function SmartEscapePage() {
   function selectStart(id: string) {
     if (id === "") { setStartId(""); return; }
     const node = building?.nodes.find(node => node.id === id);
-    if (node && node.type !== "exit" && !building?.initial_state.blocked_nodes.includes(id)) setStartId(id);
+    if (node && node.type !== "exit" && !runtimeState.blockedNodes.includes(id)) setStartId(id);
   }
+
+  function changeHazard(key: keyof RuntimeState, id: string) {
+    if (!building) return;
+    const node = building.nodes.find(node => node.id === id);
+    const valid = key === "blockedEdges" ? building.edges.some(edge => edge.id === id)
+      : key === "closedExits" ? node?.type === "exit" : node !== undefined && node.type !== "exit";
+    if (valid) setRuntimeState(previous => toggleHazard(previous, key, id));
+  }
+
+  function resetHazards() {
+    if (building) setRuntimeState(createRuntimeState(building.initial_state));
+  }
+
+  const simulationState = useMemo<BuildingState>(() => ({
+    blocked_nodes: runtimeState.blockedNodes,
+    blocked_edges: runtimeState.blockedEdges,
+    closed_exits: runtimeState.closedExits,
+  }), [runtimeState]);
+  const startBlocked = !!startId && runtimeState.blockedNodes.includes(startId);
 
   const { route, routingError } = useMemo(() => {
     if (!building || !startId) return { route: null, routingError: null };
-    try { return { route: findEvacuationRoute(building, startId), routingError: null }; }
+    try { return { route: findEvacuationRoute(building, startId, simulationState), routingError: null }; }
     catch (error: unknown) { return { route: null, routingError: error instanceof Error ? error.message : "Unable to calculate this route." }; }
-  }, [building, startId]);
-  const openExits = building?.nodes.filter(node => node.type === "exit" && !building.initial_state.closed_exits.includes(node.id)).length ?? 0;
+  }, [building, startId, simulationState]);
+  const routeStatus = startBlocked ? "Starting location blocked" : routingError ? "Route calculation unavailable" : "No route available";
+  const openExits = building?.nodes.filter(node => node.type === "exit" && !runtimeState.closedExits.includes(node.id)).length ?? 0;
   const nodeById = new Map(building?.nodes.map(node => [node.id, node]) ?? []);
 
   return <div className="app-shell">
     <header className="app-header"><a className="brand" href="/" aria-label="Smart Escape home"><span className="brand-mark"><Icon name="shield" size={26} /></span><span>smart<span className="brand-accent">escape</span><small>EVACUATION ROUTE SIMULATOR</small></span></a>
       <div className="header-center"><span className="live-dot" /> SIMULATION MODE</div>
-      <div className="header-actions"><span className="local-badge"><Icon name="shield" size={14} /> Local & private</span><input ref={inputRef} className="visually-hidden" type="file" accept=".json,application/json" aria-label="Import building JSON" onChange={event => { void importFile(event); }} /><button className="import-button" onClick={() => inputRef.current?.click()} disabled={importing}><Icon name="upload" size={17} />{importing ? "Reading file…" : "Import JSON"}</button></div>
+      <div className="header-actions"><span className="local-badge"><Icon name="shield" size={14} /> Local & private</span><button className="reset-button header-reset" onClick={resetHazards} disabled={!building}><RotateCcw size={16} aria-hidden="true" />Reset</button><input ref={inputRef} className="visually-hidden" type="file" accept=".json,application/json" aria-label="Import building JSON" onChange={event => { void importFile(event); }} /><button className="import-button" onClick={() => inputRef.current?.click()} disabled={importing}><Icon name="upload" size={17} />{importing ? "Reading file…" : "Import JSON"}</button></div>
     </header>
     <main className="main-content">
       <section className="page-heading"><div><div className="eyebrow heading-eyebrow"><span /> BUILDING INTELLIGENCE</div><h1>Every second counts.<br className="mobile-break" /> <span>Know your way out.</span></h1><p>Explore your building. Choose a starting point. Find your safest route.</p></div><div className="workspace-badge"><span className="live-dot" />{loading ? "Loading building" : building ? "Simulation ready" : "Awaiting building"}<small>CLIENT-SIDE WORKSPACE</small></div></section>
       {errors.length > 0 && <section className="import-errors" role="alert"><Icon name="warning" /><div><h2>Building could not be loaded</h2><p>{building ? "Your current building and route have been kept. Fix the file and try again." : "Choose a valid building JSON to start the simulation."}</p><ul>{errors.map((error, index) => <li key={index}>{error}</li>)}</ul></div><button className="dismiss-button" onClick={() => setErrors([])} aria-label="Dismiss import errors"><Icon name="close" size={18} /></button></section>}
       <div className="workspace-grid"><section className="map-panel" aria-label="Interactive building map"><div className="map-toolbar"><div className="building-title"><span className="building-icon"><Icon name="layers" size={20} /></span><div><h2>{building?.building ?? "Building overview"}</h2><span className="source-file"><Icon name="file" size={12} />{filename || "No file loaded"}</span></div></div><span className="map-mode">LIVE MAP<span className="live-dot" /></span></div>
-        <div className="map-canvas">{building ? <BuildingMap building={building} startId={startId} route={route} onSelectStart={selectStart} /> : <div className="map-empty"><Icon name="layers" size={40} /><h3>{loading ? "Loading your building…" : "Your map starts here"}</h3><p>{loading ? "Preparing the demo simulation." : "Import a building JSON to explore evacuation routes."}</p></div>}<div className="canvas-label">FLOOR PLAN <span>/</span> TOPOLOGY VIEW</div></div>
+        <div className="map-canvas">{building ? <BuildingMap building={building} state={simulationState} startId={startId} route={route} onSelectStart={selectStart} /> : <div className="map-empty"><Icon name="layers" size={40} /><h3>{loading ? "Loading your building…" : "Your map starts here"}</h3><p>{loading ? "Preparing the demo simulation." : "Import a building JSON to explore evacuation routes."}</p></div>}<div className="canvas-label">FLOOR PLAN <span>/</span> TOPOLOGY VIEW</div></div>
         <div className="map-footer"><span><span className="selection-dot" />Select a room or junction to begin</span><div><span>{building?.nodes.length ?? "—"} locations</span><span>{building?.edges.length ?? "—"} corridors</span><span className="exit-count">{openExits} open exits</span></div></div>
-      </section><RoutePanel building={building} startId={startId} route={route} routingError={routingError} onSelectStart={selectStart} /></div>
-      <section className={`route-sequence ${route ? "is-active" : ""}`} aria-label="Current route" aria-live="polite"><div className="sequence-heading"><span className="sequence-icon"><Icon name="arrow" size={20} /></span><div><span className="eyebrow">{route ? "SAFE ROUTE" : "YOUR ROUTE"}</span><p>{route ? "Lowest-cost path to safety" : startId ? "No route available" : "Select a starting location"}</p></div></div><div className="sequence-nodes">{route ? route.nodeIds.map((id, index) => <span className="sequence-step" key={id}>{index > 0 && <Icon name="arrow" size={16} />}<span className={`sequence-node ${index === 0 ? "first" : index === route.nodeIds.length - 1 ? "last" : ""}`} title={nodeById.get(id)?.label}>{id}</span></span>) : <span className="sequence-placeholder">{startId ? "No route available" : "Your route will appear here once you choose a location."}</span>}</div>{route && <span className="sequence-cost">{route.totalCost}<small>TOTAL COST</small></span>}</section>
+      </section><RoutePanel building={building} state={simulationState} startId={startId} route={route} routingError={routingError} onSelectStart={selectStart} /></div>
+      <section className={`route-sequence ${route ? "is-active" : ""}`} aria-label="Current route" aria-live="polite"><div className="sequence-heading"><span className="sequence-icon"><Icon name="arrow" size={20} /></span><div><span className="eyebrow">{route ? "SAFE ROUTE" : "YOUR ROUTE"}</span><p>{route ? "Lowest-cost path to safety" : startId ? routeStatus : "Select a starting location"}</p></div></div><div className="sequence-nodes">{route ? route.nodeIds.map((id, index) => <span className="sequence-step" key={id}>{index > 0 && <Icon name="arrow" size={16} />}<span className={`sequence-node ${index === 0 ? "first" : index === route.nodeIds.length - 1 ? "last" : ""}`} title={nodeById.get(id)?.label}>{id}</span></span>) : <span className="sequence-placeholder">{startId ? routeStatus : "Your route will appear here once you choose a location."}</span>}</div>{route && <span className="sequence-cost">{route.totalCost}<small>TOTAL COST</small></span>}</section>
+      {building && <HazardControls building={building} state={runtimeState} onToggle={changeHazard} onReset={resetHazards} />}
       <footer className="app-footer"><span>SMART ESCAPE <span className="footer-divider">/</span> Interactive evacuation planning</span><span><span className="live-dot" /> All processing stays in your browser</span></footer>
     </main>
   </div>;

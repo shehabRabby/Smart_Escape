@@ -1,18 +1,23 @@
 {
   "building": "Campus Demo",
   "nodes": [
-    { "id": "room-101", "label": "Room 101", "type": "room", "x": 0, "y": 0 },
-    { "id": "hall-a", "label": "Hall A", "type": "junction", "x": 100, "y": 0 },
-    { "id": "hall-b", "label": "Hall B", "type": "junction", "x": 0, "y": 100 },
-    { "id": "exit-a", "label": "East Exit", "type": "exit", "x": 200, "y": 0 },
-    { "id": "exit-b", "label": "South Exit", "type": "exit", "x": 0, "y": 200 }
+    { "id": "R1", "label": "Room 1", "type": "room", "x": 0, "y": 0 },
+    { "id": "R2", "label": "Room 2", "type": "room", "x": 0, "y": 220 },
+    { "id": "C1", "label": "Junction 1", "type": "junction", "x": 160, "y": 0 },
+    { "id": "C2", "label": "Junction 2", "type": "junction", "x": 360, "y": 0 },
+    { "id": "C3", "label": "Junction 3", "type": "junction", "x": 160, "y": 220 },
+    { "id": "C4", "label": "Junction 4", "type": "junction", "x": 360, "y": 220 },
+    { "id": "E1", "label": "East Exit", "type": "exit", "x": 580, "y": 0 },
+    { "id": "E2", "label": "South Exit", "type": "exit", "x": 580, "y": 220 }
   ],
   "edges": [
-    { "id": "e1", "from": "room-101", "to": "hall-a", "cost": 2 },
-    { "id": "e2", "from": "room-101", "to": "hall-b", "cost": 2 },
-    { "id": "e3", "from": "hall-a", "to": "exit-a", "cost": 3 },
-    { "id": "e4", "from": "hall-b", "to": "exit-a", "cost": 3 },
-    { "id": "e5", "from": "hall-b", "to": "exit-b", "cost": 3 }
+    { "id": "e1", "from": "R1", "to": "C1", "cost": 2 },
+    { "id": "e2", "from": "C1", "to": "C2", "cost": 2 },
+    { "id": "e3", "from": "C2", "to": "E1", "cost": 3 },
+    { "id": "e4", "from": "C1", "to": "C3", "cost": 4 },
+    { "id": "e5", "from": "C3", "to": "C4", "cost": 2 },
+    { "id": "e6", "from": "C4", "to": "E2", "cost": 3 },
+    { "id": "e7", "from": "R2", "to": "C3", "cost": 2 }
   ],
   "initial_state": { "blocked_nodes": [], "blocked_edges": [], "closed_exits": [] }
 }

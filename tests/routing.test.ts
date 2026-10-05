@@ -4,12 +4,60 @@ import test from "node:test";
 import type { BuildingData, BuildingState } from "../src/lib/building-types.ts";
 import { findEvacuationRoute } from "../src/lib/routing.ts";
 import { parseBuildingJson, validateBuilding } from "../src/lib/validate-building.ts";
+import { createRuntimeState, toggleHazard } from "../src/lib/simulation-state.ts";
 
-const sample = JSON.parse(readFileSync(new URL("../public/sample-building.json", import.meta.url), "utf8")) as unknown;
+const sample = JSON.parse(readFileSync(new URL("./fixtures/tie-building.json", import.meta.url), "utf8")) as unknown;
 const validated = validateBuilding(sample);
 if (!validated.success) throw new Error(validated.errors.join("\n"));
 const building = validated.data;
 const emptyState: BuildingState = { blocked_nodes: [], blocked_edges: [], closed_exits: [] };
+const contestValidation = parseBuildingJson(readFileSync(new URL("../public/sample-building.json", import.meta.url), "utf8"));
+if (!contestValidation.success) throw new Error(contestValidation.errors.join("\n"));
+const contest = contestValidation.data;
+
+test("mandatory baseline R1: R1 → C1 → C2 → E1, cost 7", () => {
+  const route = findEvacuationRoute(contest, "R1");
+  assert.deepEqual(route?.nodeIds, ["R1", "C1", "C2", "E1"]);
+  assert.equal(route?.totalCost, 7);
+});
+
+test("mandatory blocked C2: R1 → C1 → C3 → C4 → E2, cost 11", () => {
+  const route = findEvacuationRoute(contest, "R1", { ...emptyState, blocked_nodes: ["C2"] });
+  assert.deepEqual(route?.nodeIds, ["R1", "C1", "C3", "C4", "E2"]);
+  assert.equal(route?.totalCost, 11);
+});
+
+test("mandatory closed E1 and E2: no route", () => {
+  assert.equal(findEvacuationRoute(contest, "R1", { ...emptyState, closed_exits: ["E1", "E2"] }), null);
+});
+
+test("mandatory R2: R2 → C3 → C4 → E2, cost 7", () => {
+  const route = findEvacuationRoute(contest, "R2");
+  assert.deepEqual(route?.nodeIds, ["R2", "C3", "C4", "E2"]);
+  assert.equal(route?.totalCost, 7);
+});
+
+test("mandatory blocked R1 cannot route", () => {
+  assert.equal(findEvacuationRoute(contest, "R1", { ...emptyState, blocked_nodes: ["R1"] }), null);
+});
+
+test("runtime toggles are independent and reset clones the imported baseline", () => {
+  const initial: BuildingState = { blocked_nodes: ["C2", "C2"], blocked_edges: ["e5"], closed_exits: ["E2"] };
+  const snapshot = structuredClone(initial);
+  const original = createRuntimeState(initial);
+  let runtime = toggleHazard(original, "blockedNodes", "C2");
+  runtime = toggleHazard(runtime, "blockedNodes", "R1");
+  runtime = toggleHazard(runtime, "blockedEdges", "e5");
+  runtime = toggleHazard(runtime, "closedExits", "E2");
+  assert.deepEqual(runtime, { blockedNodes: ["R1"], blockedEdges: [], closedExits: [] });
+  assert.deepEqual(initial, snapshot);
+  assert.deepEqual(original, { blockedNodes: ["C2"], blockedEdges: ["e5"], closedExits: ["E2"] });
+  const reset = createRuntimeState(initial);
+  assert.deepEqual(reset, original);
+  assert.notEqual(reset.blockedNodes, initial.blocked_nodes);
+  assert.notEqual(reset.blockedEdges, initial.blocked_edges);
+  assert.notEqual(reset.closedExits, initial.closed_exits);
+});
 
 test("sample: exit tie precedes full path tie, regardless of input order", () => {
   for (const data of [building, { ...building, nodes: [...building.nodes].reverse(), edges: [...building.edges].reverse() }]) {

@@ -80,27 +80,75 @@ try {
   await command("Runtime.enable");
   await command("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false });
   await command("Page.navigate", { url: `http://127.0.0.1:${address.port}` });
-  await poll(() => evaluate("document.querySelectorAll('.map-node').length"), count => count === 5, "sample render");
-  assert.equal(await evaluate("document.querySelectorAll('.cost-label text').length"), 5);
+  await poll(() => evaluate("document.querySelectorAll('.map-node').length"), count => count === 8, "sample render");
+  assert.equal(await evaluate("document.querySelectorAll('.cost-label text').length"), 7);
   const point = await evaluate("(() => { const r = document.querySelector('.map-node.room .node-shape').getBoundingClientRect(); return { x: r.x+r.width/2, y: r.y+r.height/2 }; })()");
   await command("Input.dispatchMouseEvent", { type: "mousePressed", button: "left", clickCount: 1, ...point });
   await command("Input.dispatchMouseEvent", { type: "mouseReleased", button: "left", clickCount: 1, ...point });
-  await poll(() => evaluate("document.querySelector('#start-location').value"), value => value === "room-101", "map selection");
-  assert.equal(await evaluate("document.querySelectorAll('.map-edge.active').length"), 2);
-  assert.equal(await evaluate("document.querySelector('.destination-id').textContent"), "exit-a · Open exit");
-  assert.deepEqual(await evaluate("[...document.querySelectorAll('.sequence-node')].map(node => node.textContent)"), ["room-101", "hall-a", "exit-a"]);
-  await evaluate("(() => { const s=document.querySelector('#start-location'); s.value='hall-b'; s.dispatchEvent(new Event('change',{bubbles:true})); })()");
-  await poll(() => evaluate("document.querySelector('.map-node.selected').getAttribute('aria-label')"), value => value.includes("hall-b"), "dropdown synchronization");
+  await poll(() => evaluate("document.querySelector('#start-location').value"), value => value === "R1", "map selection");
+  assert.equal(await evaluate("document.querySelectorAll('.map-edge.active').length"), 3);
+  assert.equal(await evaluate("document.querySelector('.destination-id').textContent"), "E1 · Open exit");
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('.sequence-node')].map(node => node.textContent)"), ["R1", "C1", "C2", "E1"]);
+  await evaluate("(() => { const s=document.querySelector('#start-location'); s.value='C3'; s.dispatchEvent(new Event('change',{bubbles:true})); })()");
+  await poll(() => evaluate("document.querySelector('.map-node.selected').getAttribute('aria-label')"), value => value.includes("C3"), "dropdown synchronization");
   await evaluate("document.querySelector('.map-node.room').focus()");
   await command("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter" });
   await command("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter" });
-  await poll(() => evaluate("document.querySelector('#start-location').value"), value => value === "room-101", "keyboard selection");
-  const desktop = await command("Page.captureScreenshot", { format: "png" });
+  await poll(() => evaluate("document.querySelector('#start-location').value"), value => value === "R1", "keyboard selection");
+  async function clickHazard(key, id) {
+    const selector = `[data-hazard="${key}"][data-id="${id}"]`;
+    const before = await evaluate(`document.querySelector(${JSON.stringify(selector)}).getAttribute('aria-pressed')`);
+    await evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
+    await poll(() => evaluate(`document.querySelector(${JSON.stringify(selector)}).getAttribute('aria-pressed')`), value => value !== before, `toggle ${key} ${id}`);
+  }
+  async function selectStart(id) {
+    await evaluate(`(() => { const s=document.querySelector('#start-location'); s.value=${JSON.stringify(id)}; s.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+    await poll(() => evaluate("document.querySelector('#start-location').value"), value => value === id, "start selection");
+  }
+  async function expectRoute(nodeIds, cost) {
+    await poll(() => evaluate("[...document.querySelectorAll('.sequence-node')].map(node => node.textContent)"), value => JSON.stringify(value) === JSON.stringify(nodeIds), "route sequence");
+    assert.equal(await evaluate("Number(document.querySelector('.route-metrics strong').textContent)"), cost);
+    assert.equal(await evaluate("Number(document.querySelectorAll('.route-metrics strong')[1].textContent)"), nodeIds.length - 1);
+    assert.equal(await evaluate("document.querySelectorAll('.map-edge.active').length"), nodeIds.length - 1);
+    assert.equal(await evaluate("document.querySelector('.destination-id').textContent"), `${nodeIds.at(-1)} · Open exit`);
+    assert.equal(await evaluate("document.querySelector('.result-status').textContent"), "Route available");
+  }
+  await expectRoute(["R1", "C1", "C2", "E1"], 7);
+  await clickHazard("blockedNodes", "C2");
+  await expectRoute(["R1", "C1", "C3", "C4", "E2"], 11);
+  assert.equal(await evaluate("document.querySelector('#start-location').value"), "R1");
+  await clickHazard("blockedNodes", "C2");
+  await expectRoute(["R1", "C1", "C2", "E1"], 7);
+  await clickHazard("closedExits", "E1");
+  await expectRoute(["R1", "C1", "C3", "C4", "E2"], 11);
+  await clickHazard("closedExits", "E2");
+  await poll(() => evaluate("document.querySelector('.result-status').textContent"), value => value === "No route available", "both exits closed");
+  assert.equal(await evaluate("document.querySelectorAll('.map-edge.active').length"), 0);
+  assert.equal(await evaluate("document.querySelector('.exit-count').textContent"), "0 open exits");
+  await evaluate("document.querySelector('.reset-button').click()");
+  await expectRoute(["R1", "C1", "C2", "E1"], 7);
+  await selectStart("R2");
+  await expectRoute(["R2", "C3", "C4", "E2"], 7);
+  await selectStart("R1");
+  await clickHazard("blockedNodes", "R1");
+  await poll(() => evaluate("document.querySelector('.result-status').textContent"), value => value === "Starting location blocked", "blocked start exact status");
+  assert.equal(await evaluate("document.querySelector('#start-location').value"), "R1");
+  assert.equal(await evaluate("document.querySelectorAll('.map-node.selected.unavailable').length"), 1);
+  assert.equal(await evaluate("document.querySelectorAll('.map-edge.active').length"), 0);
+  assert.ok((await evaluate("document.querySelector('.route-sequence').textContent")).includes("Starting location blocked"));
+  await clickHazard("blockedNodes", "R1");
+  await expectRoute(["R1", "C1", "C2", "E1"], 7);
+  await clickHazard("blockedEdges", "e2");
+  await expectRoute(["R1", "C1", "C3", "C4", "E2"], 11);
+  assert.equal(await evaluate("document.querySelectorAll('.map-edge.blocked-edge').length"), 1);
+  await clickHazard("blockedEdges", "e2");
+  await expectRoute(["R1", "C1", "C2", "E1"], 7);
+  const desktop = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
   await writeFile(resolve(artifacts, "desktop.png"), Buffer.from(desktop.data, "base64"));
   await importJson("invalid.json", "{broken");
   await poll(() => evaluate("document.querySelector('.import-errors')?.textContent"), value => value?.includes("not valid JSON"), "syntax error");
-  assert.equal(await evaluate("document.querySelector('#start-location').value"), "room-101");
-  assert.equal(await evaluate("document.querySelectorAll('.map-edge.active').length"), 2);
+  assert.equal(await evaluate("document.querySelector('#start-location').value"), "R1");
+  assert.equal(await evaluate("document.querySelectorAll('.map-edge.active').length"), 3);
   await importJson("invalid-schema.json", JSON.stringify({ building: "Bad", nodes: [] }));
   await poll(() => evaluate("document.querySelector('.import-errors')?.textContent"), value => value?.includes("2–60"), "schema error");
   const fixture = {
@@ -130,6 +178,24 @@ try {
   assert.equal(await evaluate("document.querySelectorAll('.map-node.exit[role=button]').length"), 0);
   await evaluate("(() => { const s=document.querySelector('#start-location'); s.value='R1'; s.dispatchEvent(new Event('change',{bubbles:true})); })()");
   await poll(() => evaluate("document.querySelector('.result-status').textContent"), value => value === "No route available", "unreachable status");
+  await clickHazard("blockedNodes", "R2");
+  await clickHazard("blockedEdges", "c");
+  await clickHazard("closedExits", "E1");
+  await expectRoute(["R1", "C1", "E1"], 5);
+  assert.equal(await evaluate("document.querySelectorAll('.hazard-toggle.is-active').length"), 0);
+  await evaluate("document.querySelector('.reset-button').click()");
+  await poll(() => evaluate("document.querySelectorAll('.hazard-toggle.is-active').length"), value => value === 3, "reset to nonempty imported state");
+  assert.equal(await evaluate("document.querySelector('#start-location').value"), "R1");
+  assert.equal(await evaluate("document.querySelector('.result-status').textContent"), "No route available");
+  assert.equal(await evaluate("document.querySelectorAll('.map-edge.unavailable').length"), 3);
+  await clickHazard("blockedNodes", "R1");
+  await importJson("invalid-while-hazardous.json", "{broken");
+  await poll(() => evaluate("document.querySelector('.import-errors')?.textContent"), value => value?.includes("not valid JSON"), "invalid import preserves runtime hazards");
+  assert.equal(await evaluate("document.querySelectorAll('.hazard-toggle.is-active').length"), 4);
+  assert.equal(await evaluate("document.querySelector('.result-status').textContent"), "Starting location blocked");
+  await evaluate("document.querySelector('.reset-button').click()");
+  await poll(() => evaluate("document.querySelectorAll('.hazard-toggle.is-active').length"), value => value === 3, "reset after invalid import");
+  await evaluate("document.querySelector('.dismiss-button').click()");
   for (const width of [320, 375, 768, 1024, 1440]) {
     await command("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 800 });
     assert.equal(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true, `horizontal overflow at ${width}px`);
@@ -146,7 +212,7 @@ try {
     await poll(() => evaluate("document.querySelector('.source-file').textContent"), value => value === "coordinates.json", "coordinate import");
     assert.equal(await evaluate("[...document.querySelectorAll('.map-node')].every(node => !/NaN|Infinity/.test(node.getAttribute('transform')))"), true);
   }
-  console.log("PASS: sample, costs, mouse/keyboard/dropdown selection, route highlight, invalid imports, replacement, initial state, no route, 5 responsive widths, extreme coordinates.");
+  console.log("PASS: all five mandatory sample scenarios; block/unblock nodes and corridors; close/reopen exits; automatic rerouting; reset to empty and nonempty imported state; invalid imports preserve runtime hazards; all previous import/map/keyboard/responsive/coordinate checks.");
   console.log(`Screenshots: ${artifacts}`);
 } finally {
   socket?.close();

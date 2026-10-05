@@ -1,10 +1,11 @@
 "use client";
 
 import { useId } from "react";
-import type { BuildingData, EvacuationRoute } from "@/lib/building-types";
+import type { BuildingData, BuildingState, EvacuationRoute } from "@/lib/building-types";
 
 interface BuildingMapProps {
   building: BuildingData;
+  state: BuildingState;
   startId: string;
   route: EvacuationRoute | null;
   onSelectStart: (id: string) => void;
@@ -25,12 +26,12 @@ function fitCoordinates(building: BuildingData) {
 }
 function compactLabel(label: string): string { return label.length > 22 ? `${label.slice(0, 21)}…` : label; }
 
-export function BuildingMap({ building, startId, route, onSelectStart }: BuildingMapProps) {
+export function BuildingMap({ building, state, startId, route, onSelectStart }: BuildingMapProps) {
   const patternId = useId().replace(/:/g, "");
   const positions = fitCoordinates(building);
-  const blockedNodes = new Set(building.initial_state.blocked_nodes);
-  const closedExits = new Set(building.initial_state.closed_exits);
-  const blockedEdges = new Set(building.initial_state.blocked_edges);
+  const blockedNodes = new Set(state.blocked_nodes);
+  const closedExits = new Set(state.closed_exits);
+  const blockedEdges = new Set(state.blocked_edges);
   const routeEdges = new Set(route?.edgeIds ?? []);
   const routeNodes = new Set(route?.nodeIds ?? []);
   const unavailable = (id: string) => blockedNodes.has(id) || closedExits.has(id);
@@ -42,7 +43,7 @@ export function BuildingMap({ building, startId, route, onSelectStart }: Buildin
       const from = positions.get(edge.from)!, to = positions.get(edge.to)!;
       const blocked = blockedEdges.has(edge.id) || unavailable(edge.from) || unavailable(edge.to);
       const active = routeEdges.has(edge.id) && !blocked;
-      return <g key={edge.id} className={`map-edge ${blocked ? "unavailable" : active ? "active" : ""}`}>
+      return <g key={edge.id} className={`map-edge ${blocked ? "unavailable" : active ? "active" : ""} ${blockedEdges.has(edge.id) ? "blocked-edge" : ""}`}>
         <title>{`${edge.id}: ${edge.from} ↔ ${edge.to}; cost ${edge.cost}${blocked ? "; unavailable" : active ? "; active route" : ""}`}</title>
         {active && <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="route-underlay" />}
         <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="corridor-line" />
@@ -74,7 +75,7 @@ export function BuildingMap({ building, startId, route, onSelectStart }: Buildin
         {node.type === "junction" ? <circle className="node-shape" r="22" /> : <rect className="node-shape" x="-44" y="-27" width="88" height="54" rx="12" />}
         {blocked ? <path className="node-symbol" d="m-7-7 14 14 M7-7-7 7" /> : node.type === "exit" ? <path className="node-symbol" d="M-3-10h-9v20h9 M-3 0h17 M8-6l6 6-6 6" /> : node.type === "room" ? <path className="node-symbol" d="M-10 10v-20H7v20 M-13 10h26 M2 0v1" /> : <circle className="junction-center" r="5" />}
         <text className="node-label" y="49" textAnchor="middle">{compactLabel(node.label)}</text>
-        <text className="node-caption" y="67" textAnchor="middle">{selected ? "START LOCATION" : destination ? "DESTINATION" : blocked ? "UNAVAILABLE" : node.type === "exit" ? "SAFE EXIT" : compactLabel(node.id)}</text>
+        <text className="node-caption" y="67" textAnchor="middle">{selected ? blocked ? "START · BLOCKED" : "START LOCATION" : destination ? "DESTINATION" : blocked ? node.type === "exit" ? "CLOSED EXIT" : "BLOCKED" : node.type === "exit" ? "SAFE EXIT" : compactLabel(node.id)}</text>
       </g>;
     })}</g>
   </svg>;
