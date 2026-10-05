@@ -1,0 +1,68 @@
+{
+  "building": "Omega Complex - Advanced Stress Test",
+  "nodes": [
+    { "id": "R1", "label": "Control Room", "type": "room", "x": 40, "y": 100 },
+    { "id": "R2", "label": "Lab Alpha", "type": "room", "x": 40, "y": 220 },
+    { "id": "R3", "label": "Server Room", "type": "room", "x": 40, "y": 340 },
+    { "id": "R4", "label": "Storage", "type": "room", "x": 350, "y": 400 },
+    { "id": "R5", "label": "Isolated Room", "type": "room", "x": 40, "y": 460 },
+
+    { "id": "C1", "label": "Junction A", "type": "junction", "x": 140, "y": 80 },
+    { "id": "C2", "label": "Junction B", "type": "junction", "x": 140, "y": 220 },
+    { "id": "C3", "label": "Junction C", "type": "junction", "x": 240, "y": 60 },
+    { "id": "C4", "label": "Junction D", "type": "junction", "x": 240, "y": 150 },
+    { "id": "C5", "label": "Central Hub", "type": "junction", "x": 340, "y": 105 },
+    { "id": "C6", "label": "North Hall", "type": "junction", "x": 440, "y": 60 },
+    { "id": "C7", "label": "South Hall", "type": "junction", "x": 440, "y": 150 },
+    { "id": "C8", "label": "Emergency Junction", "type": "junction", "x": 140, "y": 340 },
+    { "id": "C9", "label": "Backup Hall", "type": "junction", "x": 260, "y": 300 },
+    { "id": "C10", "label": "Rear Junction", "type": "junction", "x": 380, "y": 300 },
+
+    { "id": "E1", "label": "North Exit", "type": "exit", "x": 560, "y": 60 },
+    { "id": "E2", "label": "East Exit", "type": "exit", "x": 560, "y": 150 },
+    { "id": "E3", "label": "Rear Exit", "type": "exit", "x": 500, "y": 300 }
+  ],
+
+  "edges": [
+    { "id": "L01", "from": "R1", "to": "C1", "cost": 2 },
+    { "id": "L02", "from": "R1", "to": "C2", "cost": 2 },
+
+    { "id": "L03", "from": "R2", "to": "C2", "cost": 1 },
+    { "id": "L04", "from": "R3", "to": "C8", "cost": 1 },
+    { "id": "L05", "from": "R4", "to": "C10", "cost": 5 },
+
+    { "id": "L06", "from": "C1", "to": "C3", "cost": 2 },
+    { "id": "L07", "from": "C1", "to": "C4", "cost": 2 },
+    { "id": "L08", "from": "C2", "to": "C3", "cost": 2 },
+    { "id": "L09", "from": "C2", "to": "C4", "cost": 2 },
+
+    { "id": "L10", "from": "C3", "to": "C5", "cost": 2 },
+    { "id": "L11", "from": "C4", "to": "C5", "cost": 2 },
+    { "id": "L12", "from": "C3", "to": "C4", "cost": 1 },
+
+    { "id": "L13", "from": "C5", "to": "C6", "cost": 2 },
+    { "id": "L14", "from": "C5", "to": "C7", "cost": 2 },
+    { "id": "L15", "from": "C6", "to": "C7", "cost": 1 },
+
+    { "id": "L16", "from": "C6", "to": "E1", "cost": 2 },
+    { "id": "L17", "from": "C7", "to": "E1", "cost": 2 },
+    { "id": "L18", "from": "C6", "to": "E2", "cost": 2 },
+    { "id": "L19", "from": "C7", "to": "E2", "cost": 2 },
+
+    { "id": "L20", "from": "C2", "to": "C8", "cost": 3 },
+    { "id": "L21", "from": "C8", "to": "C9", "cost": 2 },
+    { "id": "L22", "from": "C9", "to": "C5", "cost": 3 },
+
+    { "id": "L23", "from": "C9", "to": "C10", "cost": 2 },
+    { "id": "L24", "from": "C10", "to": "E3", "cost": 4 },
+
+    { "id": "L25", "from": "C7", "to": "C10", "cost": 4 },
+    { "id": "L26", "from": "C4", "to": "C9", "cost": 5 }
+  ],
+
+  "initial_state": {
+    "blocked_nodes": [],
+    "blocked_edges": [],
+    "closed_exits": []
+  }
+}
