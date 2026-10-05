@@ -5,6 +5,7 @@ import type { BuildingData, BuildingState } from "../src/lib/building-types.ts";
 import { findEvacuationRoute } from "../src/lib/routing.ts";
 import { parseBuildingJson, validateBuilding } from "../src/lib/validate-building.ts";
 import { createRuntimeState, toggleHazard } from "../src/lib/simulation-state.ts";
+import { localizeError, translate } from "../src/lib/translations.ts";
 
 const sample = JSON.parse(readFileSync(new URL("./fixtures/tie-building.json", import.meta.url), "utf8")) as unknown;
 const validated = validateBuilding(sample);
@@ -14,6 +15,17 @@ const emptyState: BuildingState = { blocked_nodes: [], blocked_edges: [], closed
 const contestValidation = parseBuildingJson(readFileSync(new URL("../public/sample-building.json", import.meta.url), "utf8"));
 if (!contestValidation.success) throw new Error(contestValidation.errors.join("\n"));
 const contest = contestValidation.data;
+
+test("typed localization preserves IDs and translates statuses and validation paths", () => {
+  assert.equal(translate("en", "startBlocked"), "Starting location blocked");
+  assert.equal(translate("bn", "startBlocked"), "শুরুর স্থান অবরুদ্ধ");
+  assert.equal(translate("bn", "noRoute"), "কোনো পথ নেই");
+  assert.equal(translate("bn", "cost", { cost: 11 }), "খরচ 11");
+  assert.equal(translate("bn", "mapDescription", { building: "Campus Demo" }).startsWith("Campus Demo"), true);
+  assert.equal(localizeError("The file is not valid JSON.", "bn"), "ফাইলটি সঠিক JSON নয়।");
+  assert.equal(localizeError('initial_state.closed_exits[0] references unknown node "E2".', "bn"), 'initial_state.closed_exits[0]-এ অজানা ID "E2" আছে।');
+  assert.equal(localizeError("nodes must contain 2–60 entries.", "en"), "nodes must contain 2–60 entries.");
+});
 
 test("mandatory baseline R1: R1 → C1 → C2 → E1, cost 7", () => {
   const route = findEvacuationRoute(contest, "R1");

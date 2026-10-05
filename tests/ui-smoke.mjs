@@ -105,13 +105,20 @@ try {
     await evaluate(`(() => { const s=document.querySelector('#start-location'); s.value=${JSON.stringify(id)}; s.dispatchEvent(new Event('change',{bubbles:true})); })()`);
     await poll(() => evaluate("document.querySelector('#start-location').value"), value => value === id, "start selection");
   }
+  let activeLanguage = "en";
+  async function setLanguage(language) {
+    await evaluate(`document.querySelector('[data-language="${language}"]').click()`);
+    await poll(() => evaluate("document.documentElement.lang"), value => value === language, "document language");
+    activeLanguage = language;
+    assert.equal(await evaluate(`document.querySelector('[data-language="${language}"]').getAttribute('aria-pressed')`), "true");
+  }
   async function expectRoute(nodeIds, cost) {
     await poll(() => evaluate("[...document.querySelectorAll('.sequence-node')].map(node => node.textContent)"), value => JSON.stringify(value) === JSON.stringify(nodeIds), "route sequence");
     assert.equal(await evaluate("Number(document.querySelector('.route-metrics strong').textContent)"), cost);
     assert.equal(await evaluate("Number(document.querySelectorAll('.route-metrics strong')[1].textContent)"), nodeIds.length - 1);
     assert.equal(await evaluate("document.querySelectorAll('.map-edge.active').length"), nodeIds.length - 1);
-    assert.equal(await evaluate("document.querySelector('.destination-id').textContent"), `${nodeIds.at(-1)} · Open exit`);
-    assert.equal(await evaluate("document.querySelector('.result-status').textContent"), "Route available");
+    assert.equal(await evaluate("document.querySelector('.destination-id').textContent"), `${nodeIds.at(-1)} · ${activeLanguage === "en" ? "Open exit" : "খোলা প্রস্থান"}`);
+    assert.equal(await evaluate("document.querySelector('.result-status').textContent"), activeLanguage === "en" ? "Route available" : "পথ পাওয়া গেছে");
   }
   await expectRoute(["R1", "C1", "C2", "E1"], 7);
   await clickHazard("blockedNodes", "C2");
@@ -143,8 +150,50 @@ try {
   assert.equal(await evaluate("document.querySelectorAll('.map-edge.blocked-edge').length"), 1);
   await clickHazard("blockedEdges", "e2");
   await expectRoute(["R1", "C1", "C2", "E1"], 7);
-  const desktop = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
-  await writeFile(resolve(artifacts, "desktop.png"), Buffer.from(desktop.data, "base64"));
+  // Repeat all mandatory scenarios in Bangla; changing language preserves simulation.
+  await setLanguage("bn");
+  await expectRoute(["R1", "C1", "C2", "E1"], 7);
+  assert.equal(await evaluate("document.querySelector('.building-title h2').textContent"), "Campus Demo");
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('.node-label')].map(node => node.textContent)"), ["Room 1", "Room 2", "Junction 1", "Junction 2", "Junction 3", "Junction 4", "East Exit", "South Exit"]);
+  assert.equal(await evaluate("document.querySelector('.import-button').textContent"), "ফাইল বদলান");
+  await clickHazard("blockedNodes", "C2");
+  await expectRoute(["R1", "C1", "C3", "C4", "E2"], 11);
+  await clickHazard("blockedNodes", "C2");
+  await clickHazard("closedExits", "E1");
+  await clickHazard("closedExits", "E2");
+  await poll(() => evaluate("document.querySelector('.result-status').textContent"), value => value === "কোনো পথ নেই", "Bangla no route");
+  await evaluate("document.querySelector('.reset-button').click()");
+  await selectStart("R2");
+  await expectRoute(["R2", "C3", "C4", "E2"], 7);
+  await selectStart("R1");
+  await clickHazard("blockedNodes", "R1");
+  await poll(() => evaluate("document.querySelector('.result-status').textContent"), value => value === "শুরুর স্থান অবরুদ্ধ", "Bangla blocked start");
+  await setLanguage("en");
+  assert.equal(await evaluate("document.querySelector('.result-status').textContent"), "Starting location blocked");
+  assert.equal(await evaluate("document.querySelector('#start-location').value"), "R1");
+  await setLanguage("bn");
+  await clickHazard("blockedNodes", "R1");
+  await expectRoute(["R1", "C1", "C2", "E1"], 7);
+  await importJson("invalid-bangla.json", "{broken");
+  await poll(() => evaluate("document.querySelector('.import-errors')?.textContent"), value => value?.includes("ফাইলটি সঠিক JSON নয়।"), "Bangla JSON error");
+  await importJson("invalid-schema-bangla.json", JSON.stringify({ building: "Bad", nodes: [] }));
+  await poll(() => evaluate("document.querySelector('.import-errors')?.textContent"), value => value?.includes("nodes-এ 2–60টি তথ্য থাকতে হবে।"), "Bangla validation fields");
+  await evaluate("document.querySelector('.dismiss-button').click()");
+  for (const width of [320, 375, 768, 1024, 1440]) {
+    await command("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 800 });
+    assert.equal(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true, `Bangla horizontal overflow at ${width}px`);
+    assert.equal(await evaluate("document.querySelector('.building-svg').getBoundingClientRect().width > 0"), true);
+    if (width < 800) assert.equal(await evaluate("document.querySelector('.route-panel').getBoundingClientRect().top >= document.querySelector('.map-panel').getBoundingClientRect().bottom"), true);
+  }
+  await command("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+  await clickHazard("blockedNodes", "C2");
+  await expectRoute(["R1", "C1", "C3", "C4", "E2"], 11);
+  await clickHazard("blockedNodes", "C2");
+  await expectRoute(["R1", "C1", "C2", "E1"], 7);
+  assert.equal(await evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches"), true);
+  await setLanguage("en");
+  await command("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
+  await command("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false });
   await importJson("invalid.json", "{broken");
   await poll(() => evaluate("document.querySelector('.import-errors')?.textContent"), value => value?.includes("not valid JSON"), "syntax error");
   assert.equal(await evaluate("document.querySelector('#start-location').value"), "R1");
@@ -202,8 +251,6 @@ try {
     if (width < 800) assert.equal(await evaluate("document.querySelector('.route-panel').getBoundingClientRect().top >= document.querySelector('.map-panel').getBoundingClientRect().bottom"), true);
   }
   await command("Emulation.setDeviceMetricsOverride", { width: 375, height: 1100, deviceScaleFactor: 1, mobile: true });
-  const mobile = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
-  await writeFile(resolve(artifacts, "mobile.png"), Buffer.from(mobile.data, "base64"));
   // Valid coordinates may be zero, coincident, tiny, or close to numeric limits.
   for (const coordinates of [[0, 0], [1e-320, -1e-320], [1e308, -1e308]]) {
     const data = structuredClone(fixture);
@@ -212,8 +259,7 @@ try {
     await poll(() => evaluate("document.querySelector('.source-file').textContent"), value => value === "coordinates.json", "coordinate import");
     assert.equal(await evaluate("[...document.querySelectorAll('.map-node')].every(node => !/NaN|Infinity/.test(node.getAttribute('transform')))"), true);
   }
-  console.log("PASS: all five mandatory sample scenarios; block/unblock nodes and corridors; close/reopen exits; automatic rerouting; reset to empty and nonempty imported state; invalid imports preserve runtime hazards; all previous import/map/keyboard/responsive/coordinate checks.");
-  console.log(`Screenshots: ${artifacts}`);
+  console.log("PASS: all five mandatory scenarios in English and Bangla; unchanged dataset labels/IDs; localized errors; five widths in both languages; reduced motion; all previous hazard/reset/import/map/keyboard/coordinate checks. No screenshots generated.");
 } finally {
   socket?.close();
   chrome.kill();

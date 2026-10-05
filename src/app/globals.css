@@ -205,3 +205,54 @@ h1 > span { color: #91a0b6; font-weight: 400; }
   .node-caption { font-size: 15px; }
   .cost-label text { font-size: 21px; }
 }
+
+/* Final UI pass: comfortable controls, consistent text, bilingual header. */
+body { font-family: "Segoe UI", "Nirmala UI", "Vrinda", Arial, sans-serif; }
+.language-switcher { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid #344862; background: #132036; border-radius: 8px; flex-shrink: 0; }
+.language-switcher button { padding: 8px 10px; min-height: 36px; background: transparent; color: #acbdd5; border: 1px solid transparent; border-radius: 5px; font-size: 12px; transition: background .15s, color .15s; }
+.language-switcher button.is-selected { color: #f1f6ff; background: #2e4870; border-color: #5074a0; }
+.language-switcher button:hover { color: #fff; background: #263c5b; }
+.app-header { gap: 18px; }
+.header-center { margin-left: auto; margin-right: auto; }
+.import-button, .reset-button { min-height: 44px; font-size: 12px; }
+.start-control select { min-height: 46px; font-size: 12px; }
+.hazard-toggle { min-height: 52px; }
+.hazard-item-text strong, .result-status { font-size: 12px; }
+.hazard-item-text small, .hazard-group-heading p, .panel-note { font-size: 10px; }
+.hazard-state, .hazard-count { font-size: 10px; }
+.panel-intro, .start-control p, .empty-route p { font-size: 12px; line-height: 1.75; }
+.toggle-track { width: 30px; height: 18px; }
+.toggle-track > span { width: 12px; height: 12px; }
+.is-active .toggle-track > span { left: 15px; }
+.route-result.has-route { border-color: #417858; box-shadow: 0 0 18px #32bd7610; }
+.node-label { stroke-width: 6px; }
+.node-caption { stroke-width: 4px; }
+.dismiss-button { display: grid; place-items: center; min-width: 40px; min-height: 40px; }
+html[lang="bn"] .eyebrow, html[lang="bn"] .metric-label, html[lang="bn"] .node-caption, html[lang="bn"] .brand small { letter-spacing: .2px; }
+html[lang="bn"] .eyebrow, html[lang="bn"] .metric-label { font-size: 11px; }
+html[lang="bn"] .brand small { font-size: 10px; }
+html[lang="bn"] .route-panel h2 { line-height: 1.5; }
+html[lang="bn"] .hazard-state { font-size: 11px; }
+@media (max-width: 1200px) { .header-center, .local-badge { display: none; } .language-switcher { margin-left: auto; } .hazard-group-heading { flex-wrap: wrap; } .hazard-count { margin-left: auto; } }
+@media (max-width: 600px) {
+  .app-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 10px; padding: 16px 4%; }
+  .brand { font-size: 21px; gap: 8px; }
+  .brand-mark { width: 35px; height: 40px; }
+  .brand small { font-size: 6px; letter-spacing: 1px; }
+  .language-switcher { margin-left: 0; }
+  .language-switcher button { padding: 6px 8px; font-size: 11px; }
+  .header-actions { grid-column: 1 / -1; justify-content: flex-end; gap: 10px; }
+  .header-reset { padding: 10px 15px; font-size: 12px; }
+  .import-button { padding: 10px 16px; font-size: 12px; }
+  .page-heading { padding-top: 24px; }
+  .route-sequence { gap: 16px; }
+  .sequence-node { font-size: 12px; padding: 8px 10px; }
+  .legend li { font-size: 11px; }
+  .map-footer { font-size: 10px; }
+  .hazard-heading h2 { line-height: 1.5; }
+  .hazard-group-heading p { font-size: 11px; }
+  .hazard-list { max-height: 285px; }
+  html[lang="bn"] h1 { line-height: 1.55; letter-spacing: -.3px; }
+  html[lang="bn"] .brand small { font-size: 8px; }
+}
+@media (max-width: 350px) { .brand { font-size: 18px; gap: 6px; } .brand-mark { width: 30px; height: 36px; } .brand small { font-size: 5px; } html[lang="bn"] .brand small { font-size: 7px; } .language-switcher button { padding: 6px; } .hazard-toggle { gap: 7px; padding: 10px 6px; } .hazard-state { gap: 5px; font-size: 9px; } }
