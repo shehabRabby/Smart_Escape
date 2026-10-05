@@ -29,7 +29,7 @@ export function HazardControls({ building, state, onToggle, onReset }: HazardCon
       <ul className="hazard-list">{group.items.map(item => {
         const active = state[group.key].includes(item.id);
         return <li key={item.id}><motion.button className={`hazard-toggle ${active ? "is-active" : ""}`} type="button" aria-pressed={active}
-          animate={{ backgroundColor: active ? "#73384430" : "#14213600" }} whileTap={reduced ? undefined : { scale: .985 }}
+          whileTap={reduced ? undefined : { scale: .985 }}
           aria-label={`${t(active ? group.key === "closedExits" ? "reopen" : "unblock" : group.key === "closedExits" ? "close" : "block")} ${t(group.key === "blockedEdges" ? "corridor" : group.key === "closedExits" ? "exit" : "location")} ${item.id}: ${item.label}`}
           data-hazard={group.key} data-id={item.id} onClick={() => onToggle(group.key, item.id)}>
           <span className="hazard-item-icon">{active ? <LockKeyhole size={15} aria-hidden="true" /> : <group.icon size={15} aria-hidden="true" />}</span>

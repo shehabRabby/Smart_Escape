@@ -1,0 +1,32 @@
+/* Semantic shell tokens. Graph tokens stay on a light canvas in both themes. */
+:root {
+  color-scheme: light;
+  --background: #edf2f7; --foreground: #172b45; --surface: #fff; --surface-elevated: #f3f6fb;
+  --border: #adbed2; --border-subtle: #cbd7e5; --muted: #455b76; --subtle: #526986;
+  --primary: #215bba; --primary-tint: #e4edff; --primary-border: #799fdc;
+  --button: #245fc9; --button-hover: #184dae; --on-primary: #fff;
+  --control: #f4f7fc; --control-hover: #e7eef9;
+  --success: #14613f; --success-tint: #e6f6ed; --success-border: #80b49a;
+  --warning: #795008; --warning-tint: #fff4de; --warning-border: #b79049;
+  --danger: #a72b45; --danger-tint: #fcebf0; --danger-border: #c58090;
+  --focus: #2459ac; --shadow: #163b6818; --glow: #245fc914;
+  --grid-dot: #cbd5df; --map-background: #f4f7fa; --map-surface: #fff;
+  --map-foreground: #273c55; --map-muted: #50657d; --map-border: #c2cfdf;
+  --inactive-graph: #72849c; --junction-fill: #e5ecf4; --junction-dot: #647e9d;
+  --route: #2563eb; --route-strong: #174cb9; --route-tint: #e1ecff; --route-glow: #2563eb26;
+  --exit-fill: #e5f7ef; --exit-strong-fill: #d7f3e5; --map-success: #14724d; --map-success-border: #409a76; --exit-glow: #20a26c20;
+  --map-danger: #ac2c44; --map-danger-fill: #fde9ed; --map-danger-border: #c65d72; --map-danger-muted: #cf8590; --danger-glow: #cb506422;
+  --map-halo: #f4f7fa;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0b1423; --foreground: #f0f4fb; --surface: #142136; --surface-elevated: #192a42;
+  --border: #4e6684; --border-subtle: #31455f; --muted: #b1c1d7; --subtle: #a1b4ce;
+  --primary: #9fc1ff; --primary-tint: #213959; --primary-border: #648bc3;
+  --button: #2864d7; --button-hover: #1f55c0; --on-primary: #fff;
+  --control: #1a2b43; --control-hover: #263e5c;
+  --success: #8ce9bd; --success-tint: #183e32; --success-border: #4b8d6c;
+  --warning: #f4cb88; --warning-tint: #3b2e1c; --warning-border: #ac8140;
+  --danger: #ffb1c1; --danger-tint: #492637; --danger-border: #b26a7d;
+  --focus: #9dbaff; --shadow: #0003; --glow: #76a6ff15;
+}

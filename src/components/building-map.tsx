@@ -1,9 +1,10 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { BuildingData, BuildingState, EvacuationRoute } from "@/lib/building-types";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useLanguage } from "./language-provider";
+import { fitCoordinates } from "@/lib/map-geometry";
 
 interface BuildingMapProps {
   building: BuildingData;
@@ -13,26 +14,23 @@ interface BuildingMapProps {
   onSelectStart: (id: string) => void;
 }
 
-/** Uniform fitting preserves supplied geometry, including negative/extreme finite coordinates. */
-function fitCoordinates(building: BuildingData) {
-  const magnitude = Math.max(...building.nodes.flatMap(node => [Math.abs(node.x), Math.abs(node.y)])) || 1;
-  const xs = building.nodes.map(node => node.x / magnitude);
-  const ys = building.nodes.map(node => node.y / magnitude);
-  const minX = Math.min(...xs), minY = Math.min(...ys);
-  const spanX = Math.max(...xs) - minX, spanY = Math.max(...ys) - minY;
-  const scale = spanX === 0 && spanY === 0 ? 1 : Math.min(spanX > 0 ? 760 / spanX : Infinity, spanY > 0 ? 380 / spanY : Infinity);
-  return new Map(building.nodes.map((node, index) => [node.id, {
-    x: 120 + (760 - spanX * scale) / 2 + (xs[index] - minX) * scale,
-    y: 100 + (380 - spanY * scale) / 2 + (ys[index] - minY) * scale,
-  }]));
-}
 function compactLabel(label: string): string { return label.length > 22 ? `${label.slice(0, 21)}…` : label; }
 
 export function BuildingMap({ building, state, startId, route, onSelectStart }: BuildingMapProps) {
   const { t } = useLanguage();
   const reduced = useReducedMotion();
   const patternId = useId().replace(/:/g, "");
-  const positions = fitCoordinates(building);
+  const positions = useMemo(() => fitCoordinates(building.nodes), [building.nodes]);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [width, setWidth] = useState(1000);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const observer = new ResizeObserver(entries => { if (entries[0].contentRect.width > 0) setWidth(entries[0].contentRect.width); });
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
+  const hitSize = Math.max(88, 44 * 1000 / width);
   const blockedNodes = new Set(state.blocked_nodes);
   const closedExits = new Set(state.closed_exits);
   const blockedEdges = new Set(state.blocked_edges);
@@ -40,8 +38,8 @@ export function BuildingMap({ building, state, startId, route, onSelectStart }: 
   const routeNodes = new Set(route?.nodeIds ?? []);
   const unavailable = (id: string) => blockedNodes.has(id) || closedExits.has(id);
 
-  return <svg className="building-svg" viewBox="0 0 1000 620" role="group" aria-label={t("mapDescription", { building: building.building })}>
-    <defs><pattern id={patternId} width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#cbd5df" opacity=".65" /></pattern></defs>
+  return <svg ref={svgRef} className="building-svg" viewBox="0 0 1000 620" role="group" aria-label={t("mapDescription", { building: building.building })}>
+    <defs><pattern id={patternId} width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" className="map-grid-dot" opacity=".65" /></pattern></defs>
     <rect width="1000" height="620" fill={`url(#${patternId})`} />
     <g aria-label={t("corridors")}>{building.edges.map(edge => {
       const from = positions.get(edge.from)!, to = positions.get(edge.to)!;
@@ -57,9 +55,9 @@ export function BuildingMap({ building, state, startId, route, onSelectStart }: 
       const from = positions.get(edge.from)!, to = positions.get(edge.to)!;
       const blocked = blockedEdges.has(edge.id) || unavailable(edge.from) || unavailable(edge.to);
       const active = routeEdges.has(edge.id) && !blocked;
-      const width = Math.max(30, String(edge.cost).length * 8 + 16);
+      const width = Math.max(36, String(edge.cost).length * 13 + 18);
       return <g key={edge.id} transform={`translate(${(from.x + to.x) / 2}, ${(from.y + to.y) / 2})`} className={`cost-label ${blocked ? "unavailable" : active ? "active" : ""}`}>
-        <rect x={-width / 2} y="-13" width={width} height="26" rx="8" />
+        <rect x={-width / 2} y="-15" width={width} height="30" rx="8" />
         <text textAnchor="middle" dominantBaseline="central">{edge.cost}</text>
       </g>;
     })}</g>
@@ -75,12 +73,13 @@ export function BuildingMap({ building, state, startId, route, onSelectStart }: 
         onClick={eligible ? () => onSelectStart(node.id) : undefined}
         onKeyDown={eligible ? event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelectStart(node.id); } } : undefined}>
         <title>{`${node.label} · ${node.id}${blocked ? ` · ${t("unavailable")}` : ""}`}</title>
+        {eligible && <rect className="node-hit-area" x={-hitSize / 2} y={-hitSize / 2} width={hitSize} height={hitSize} rx="12" />}
         <motion.g className="node-art" animate={{ scale: selected && !reduced ? [1, 1.06, 1] : 1 }} transition={{ duration: reduced ? 0 : .22 }} style={{ transformOrigin: "0px 0px" }}>
         {(selected || destination) && <rect className="node-halo" x="-54" y="-36" width="108" height="72" rx="19" />}
         {node.type === "junction" ? <circle className="node-shape" r="22" /> : <rect className="node-shape" x="-44" y="-27" width="88" height="54" rx="12" />}
         {blocked ? <path className="node-symbol" d="m-7-7 14 14 M7-7-7 7" /> : node.type === "exit" ? <path className="node-symbol" d="M-3-10h-9v20h9 M-3 0h17 M8-6l6 6-6 6" /> : node.type === "room" ? <path className="node-symbol" d="M-10 10v-20H7v20 M-13 10h26 M2 0v1" /> : <circle className="junction-center" r="5" />}
         </motion.g>
-        <text className="node-label" y="49" textAnchor="middle">{compactLabel(node.label)}</text>
+        <text className="node-label" y="49" textAnchor="middle" textLength={compactLabel(node.label).length > 18 ? 208 : undefined} lengthAdjust="spacingAndGlyphs">{compactLabel(node.label)}</text>
         <text className="node-caption" y="67" textAnchor="middle">{selected ? t(blocked ? "blockedStartCaption" : "startCaption") : destination ? t("destination") : blocked ? t(node.type === "exit" ? "closedExitCaption" : "blockedCaption") : node.type === "exit" ? t("safeExitCaption") : compactLabel(node.id)}</text>
       </g>;
     })}</g>

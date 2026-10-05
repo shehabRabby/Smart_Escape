@@ -1,6 +1,7 @@
 export type Language = "en" | "bn";
 
 const en = {
+  theme: "Color theme", light: "Light", dark: "Dark", system: "System", fileTooLarge: "Building files must be 5 MiB or smaller.", unexpectedError: "The simulation could not be displayed.", recoverError: "Try again", errorHelp: "Try restoring the simulation. If the problem continues, reload this page and import the building again.",
   simulator: "EVACUATION ROUTE SIMULATOR", home: "Smart Escape home", simulationMode: "SIMULATION MODE",
   localPrivate: "Local & private", importJson: "Import JSON", changeFile: "Change file", readingFile: "Reading file…", reset: "Reset", resetHazards: "Reset hazards",
   language: "Interface language", intelligence: "BUILDING INTELLIGENCE", headline: "Every second counts.", headlineEnd: "Know your way out.", introduction: "Explore your building. Choose a starting point. Find your safest route.",
@@ -21,6 +22,7 @@ const en = {
 
 export type TranslationKey = keyof typeof en;
 const bn: Record<TranslationKey, string> = {
+  theme: "রঙের থিম", light: "হালকা", dark: "গাঢ়", system: "সিস্টেম", fileTooLarge: "ভবনের ফাইল 5 MiB বা ছোট হতে হবে।", unexpectedError: "সিমুলেশন দেখানো যায়নি।", recoverError: "আবার চেষ্টা করুন", errorHelp: "সিমুলেশন ফিরিয়ে আনার চেষ্টা করুন। সমস্যা থাকলে পৃষ্ঠা আবার লোড করে ভবন আমদানি করুন।",
   simulator: "জরুরি নির্গমন পথের সিমুলেটর", home: "স্মার্ট এস্কেপ হোম", simulationMode: "সিমুলেশন মোড",
   localPrivate: "স্থানীয় ও ব্যক্তিগত", importJson: "JSON আমদানি", changeFile: "ফাইল বদলান", readingFile: "ফাইল পড়া হচ্ছে…", reset: "রিসেট", resetHazards: "ঝুঁকি রিসেট",
   language: "ইন্টারফেসের ভাষা", intelligence: "ভবনের তথ্য", headline: "প্রতিটি সেকেন্ড জরুরি।", headlineEnd: "বের হওয়ার পথ জানুন।", introduction: "ভবন দেখুন। শুরুর স্থান বাছুন। নিরাপদে বের হওয়ার পথ খুঁজুন।",
@@ -48,6 +50,7 @@ export function translate(language: Language, key: TranslationKey, values: Recor
 export function localizeError(error: string, language: Language): string {
   if (language === "en") return error;
   const known: [string, TranslationKey][] = [
+    [en.fileTooLarge, "fileTooLarge"],
     [en.invalidJson, "invalidJson"], [en.readFailed, "readFailed"], [en.sampleFailed, "sampleFailed"],
     [en.routeFailed, "routeFailed"], [en.costOverflow, "costOverflow"],
   ];
@@ -55,6 +58,7 @@ export function localizeError(error: string, language: Language): string {
   if (key) return translate(language, key);
   if (error.startsWith("Sample building could not be loaded")) return bn.sampleFailed + " " + bn.importMapPrompt;
   const messages: [RegExp, string][] = [
+    [/^Validation stopped after 100 errors\. Fix the reported fields and re-import\.$/, "100টি ত্রুটির পরে যাচাই থামানো হয়েছে। দেখানো ক্ষেত্রগুলো ঠিক করে আবার আমদানি করুন।"],
     [/^Building data must be a JSON object\.$/, "ভবনের তথ্য একটি JSON অবজেক্ট হতে হবে।"],
     [/^At least one room or junction is required\.$/, "অন্তত একটি কক্ষ বা সংযোগস্থল থাকতে হবে।"],
     [/^At least one exit is required\.$/, "অন্তত একটি প্রস্থান থাকতে হবে।"],
